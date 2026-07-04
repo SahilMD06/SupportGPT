@@ -1,0 +1,32 @@
+SupportGPT FAQ Document
+=======================
+
+Q: How do I reset my password?
+A: Go to the login page and click "Forgot Password". Enter your email address and we will send you a reset link within 5 minutes. Check your spam folder if you don't see it. The reset link expires after 24 hours.
+
+Q: What payment methods do you accept?
+A: We accept all major credit cards (Visa, MasterCard, American Express, Discover), PayPal, Apple Pay, Google Pay, and bank transfers for annual plans. All payments are processed securely through Stripe.
+
+Q: How do I cancel my subscription?
+A: You can cancel your subscription at any time from your Account Settings → Billing → Cancel Subscription. Your access will continue until the end of your current billing period. We do not offer prorated refunds for partial months.
+
+Q: What is your refund policy?
+A: We offer a 30-day money-back guarantee for all new subscriptions. If you are not satisfied within the first 30 days, contact support and we will process a full refund within 5-7 business days.
+
+Q: How do I upgrade my plan?
+A: Go to Account Settings → Billing → Change Plan. You will be charged a prorated amount for the remainder of the current billing period. The new features will be available immediately.
+
+Q: Is my data secure?
+A: Yes. We use AES-256 encryption for data at rest and TLS 1.3 for data in transit. We are SOC 2 Type II certified and GDPR compliant. We never sell your data to third parties.
+
+Q: How many users can I add to my account?
+A: Starter: 1 user, Pro: up to 10 users, Business: up to 50 users, Enterprise: unlimited users. Each user gets their own login credentials and permission levels.
+
+Q: Can I export my data?
+A: Yes. Go to Account Settings → Data → Export. You can export your conversations, analytics, and account data in CSV or JSON format. Enterprise customers can also use our API for automated exports.
+
+Q: What integrations are available?
+A: We integrate with Slack, Microsoft Teams, Zendesk, Salesforce, HubSpot, Jira, GitHub, and over 200 other tools via Zapier and our REST API.
+
+Q: How do I contact support?
+A: You can reach us via this chat system 24/7, email at support@supportgpt.com, or phone (business hours only) at 1-800-SUPPORT. Enterprise customers have a dedicated account manager.

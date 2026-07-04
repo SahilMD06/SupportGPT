@@ -1,0 +1,39 @@
+# FastAPI & Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.6
+python-multipart>=0.0.9
+
+# Auth & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt==4.0.1
+pydantic>=2.8.2
+pydantic-settings>=2.4.0
+pydantic[email]>=2.8.2
+
+# Database
+motor>=3.5.1
+pymongo>=4.8.0
+
+# AI — Gemini (calls the API directly, no LangChain wrapper)
+google-genai>=0.3.0
+
+# Used only for splitting extracted PDF text into chunks
+langchain-text-splitters>=0.3.0
+
+# RAG & Embeddings
+faiss-cpu>=1.9.0
+sentence-transformers>=3.1.0
+torch>=2.6.0
+numpy>=2.0.0
+
+# PDF Processing
+pymupdf>=1.24.10
+
+# Rate Limiting
+slowapi>=0.1.9
+
+# Utilities
+python-dotenv>=1.0.1
+aiofiles>=24.1.0
+httpx>=0.27.2

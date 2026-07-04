@@ -1,0 +1,50 @@
+# ─── Environment files (secrets — never commit these) ────────────────────────
+backend/.env
+frontend/.env.local
+.env
+.env*.local
+
+# ─── Python / Backend ─────────────────────────────────────────────────────────
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# RAG data — environment-specific, not shared via git
+backend/faiss_index/
+backend/knowledge_base/*.pdf
+
+# ─── Node.js / Next.js / Frontend ─────────────────────────────────────────────
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# npm/yarn logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vercel local config
+.vercel
+
+# ─── IDE / Editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ─── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
