@@ -5,7 +5,6 @@ from typing import List, Dict, Any
 from pathlib import Path
 
 import pymupdf  # PyMuPDF - fast PDF extraction
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from utils.config import settings
 
@@ -35,12 +34,71 @@ def extract_text_from_pdf(file_path: str) -> str:
 
 def clean_text(text: str) -> str:
     """Clean extracted text."""
-    # Remove excessive whitespace
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = re.sub(r" {2,}", " ", text)
-    # Remove null bytes
     text = text.replace("\x00", "")
     return text.strip()
+
+
+def recursive_character_split(
+    text: str,
+    chunk_size: int = 500,
+    chunk_overlap: int = 50,
+    separators: List[str] = None,
+) -> List[str]:
+    """
+    Lightweight recursive character text splitter.
+
+    Mirrors the core behavior of LangChain's RecursiveCharacterTextSplitter
+    (try paragraph breaks first, then lines, then sentences, then words, then
+    hard character splits) without pulling in langchain-text-splitters, which
+    transitively depends on nltk and other heavy packages — dependencies
+    that were both crashing on Python 3.13+ (nltk's removed inspect
+    function) and, once removed from requirements.txt, leaving this file
+    with a dangling import that crashed deploys outright. This has zero
+    external dependencies beyond the standard library.
+    """
+    if separators is None:
+        separators = ["\n\n", "\n", ". ", " ", ""]
+
+    def _split(text: str, seps: List[str]) -> List[str]:
+        if len(text) <= chunk_size:
+            return [text] if text else []
+        if not seps:
+            return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+
+        sep = seps[0]
+        parts = text.split(sep) if sep else list(text)
+
+        result: List[str] = []
+        buffer = ""
+        for part in parts:
+            piece = part + sep if sep else part
+            if len(buffer) + len(piece) <= chunk_size:
+                buffer += piece
+            else:
+                if buffer:
+                    result.append(buffer)
+                if len(piece) > chunk_size:
+                    result.extend(_split(piece, seps[1:]))
+                    buffer = ""
+                else:
+                    buffer = piece
+        if buffer:
+            result.append(buffer)
+        return result
+
+    chunks = _split(text, separators)
+
+    # Add overlap between consecutive chunks so context isn't lost at boundaries
+    if chunk_overlap > 0 and len(chunks) > 1:
+        overlapped = [chunks[0]]
+        for i in range(1, len(chunks)):
+            prev_tail = chunks[i - 1][-chunk_overlap:]
+            overlapped.append(prev_tail + chunks[i])
+        chunks = overlapped
+
+    return [c.strip() for c in chunks if c.strip()]
 
 
 def chunk_text(text: str, chunk_size: int = None, chunk_overlap: int = None) -> List[str]:
@@ -48,16 +106,8 @@ def chunk_text(text: str, chunk_size: int = None, chunk_overlap: int = None) -> 
     chunk_size = chunk_size or settings.CHUNK_SIZE
     chunk_overlap = chunk_overlap or settings.CHUNK_OVERLAP
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-        length_function=len,
-        separators=["\n\n", "\n", ". ", " ", ""],
-    )
-
-    chunks = splitter.split_text(text)
-    # Filter out very short chunks
-    chunks = [c.strip() for c in chunks if len(c.strip()) > 50]
+    chunks = recursive_character_split(text, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    chunks = [c for c in chunks if len(c) > 50]
     return chunks
 
 
@@ -65,11 +115,9 @@ def process_pdf(file_path: str, filename: str) -> Dict[str, Any]:
     """Full PDF processing pipeline: extract -> clean -> chunk."""
     logger.info(f"Processing PDF: {filename}")
 
-    # Extract text
     raw_text = extract_text_from_pdf(file_path)
     clean = clean_text(raw_text)
 
-    # Chunk
     chunks = chunk_text(clean)
     logger.info(f"Created {len(chunks)} chunks from {filename}")
 

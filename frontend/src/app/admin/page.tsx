@@ -117,7 +117,7 @@ function OverviewTab() {
 
         <div className="flex flex-wrap gap-2 mb-4">
           <span className="badge" style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
-            Embedding model: {stats?.embedding_model ?? stats?.model ?? 'all-MiniLM-L6-v2'}
+            Embedding model: {stats?.embedding_model ?? stats?.model ?? 'gemini-embedding-001'}
           </span>
           <span className="badge" style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
             Confidence threshold: {stats?.confidence_threshold ?? stats?.rag_confidence_threshold ?? '0.35'}
