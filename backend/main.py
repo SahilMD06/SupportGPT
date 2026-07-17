@@ -13,6 +13,7 @@ from api.knowledge import router as knowledge_router
 from api.history import router as history_router
 from api.analytics import router as analytics_router
 from api.admin import router as admin_router
+from api.user import router as user_router
 from services.database import connect_to_mongo, close_mongo_connection
 from utils.config import settings
 
@@ -55,6 +56,7 @@ app.include_router(knowledge_router, prefix="/knowledge", tags=["Knowledge Base"
 app.include_router(history_router, prefix="/history", tags=["History"])
 app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
+app.include_router(user_router, prefix="/user", tags=["User Settings"])
 
 
 @app.get("/")

@@ -1,0 +1,15 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.git/
+.gitignore
+.env
+faiss_index/
+knowledge_base/*.pdf
+*.log

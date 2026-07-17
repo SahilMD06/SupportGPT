@@ -20,12 +20,11 @@ api.interceptors.request.use((config) => {
 
 // Response interceptor - handle expired/invalid sessions
 //
-// IMPORTANT: We only want to force a redirect-to-login when a 401 comes
-// from a PROTECTED route (meaning the user's token expired/is invalid).
-// We must NOT force a redirect when the 401 comes from the login or
-// register endpoints themselves — that's just "wrong password", and the
-// calling component needs to catch it and show a toast, not get wiped
-// out by a page reload.
+// We only force a redirect-to-login when a 401 comes from a PROTECTED route
+// (token expired/invalid/logged-out-elsewhere). We must NOT force a redirect
+// when the 401 comes from the login or register endpoints themselves —
+// that's just "wrong password", handled by the calling component's own
+// try/catch instead.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -95,6 +94,48 @@ export const adminAPI = {
   listConversations: () => api.get('/admin/conversations'),
   updateUserRole: (userId: string, role: string) =>
     api.patch(`/admin/users/${userId}/role?role=${role}`),
+};
+
+// ─── User Settings ────────────────────────────────────────────────────────────
+
+export interface ProfileUpdate {
+  username?: string;
+  full_name?: string;
+  email?: string;
+  phone?: string;
+  date_of_birth?: string;
+  profile_picture?: string;
+}
+
+export interface PreferencesUpdate {
+  theme_preference?: string;
+  font_size?: string;
+  notification_enabled?: boolean;
+  privacy_preferences?: Record<string, boolean>;
+  ai_model?: string;
+  response_length?: string;
+  show_citations?: boolean;
+  show_suggestions?: boolean;
+}
+
+export const userAPI = {
+  getProfile: () => api.get('/user/profile'),
+  updateProfile: (data: ProfileUpdate) => api.put('/user/profile', data),
+
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    api.put('/user/password', data),
+
+  getSessions: () => api.get('/user/sessions'),
+  logout: () => api.post('/user/logout'),
+  logoutAll: () => api.post('/user/logout-all'),
+
+  deleteAccount: (password: string) =>
+    api.delete('/user/account', { data: { password } }),
+
+  getPreferences: () => api.get('/user/preferences'),
+  updatePreferences: (data: PreferencesUpdate) => api.put('/user/preferences', data),
+
+  exportData: () => api.post('/user/export-data'),
 };
 
 export default api;

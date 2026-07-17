@@ -1,34 +1,85 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap, MessageSquare, Plus, BarChart2, Shield,
+  Wifi, MessageSquare, Plus, BarChart2, Shield,
   LogOut, ChevronLeft, Trash2, X, Moon, Sun, Monitor,
-  PanelLeftClose, PanelLeft, Settings
+  PanelLeftClose, PanelLeft, Settings, ChevronUp
 } from 'lucide-react';
-import { useAuthStore, useChatStore } from '@/lib/store';
-import { historyAPI } from '@/lib/api';
+import { useAuthStore, useChatStore, usePreferencesStore } from '@/lib/store';
+import { historyAPI, userAPI } from '@/lib/api';
 import { useTheme } from '@/lib/theme';
+import { Avatar } from '@/components/Avatar';
 import toast from 'react-hot-toast';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearAuth } = useAuthStore();
-  const { sessions, setSessions, setCurrentSession, clearMessages, currentSessionId } = useChatStore();
+  const { user, clearAuth, updateUser } = useAuthStore();
+  const { sessions, setSessions, setCurrentSession, clearMessages, resetChatStore, currentSessionId } = useChatStore();
+  const { preferences, loaded, setPreferences, setLoaded } = usePreferencesStore();
   const { theme, setTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadSessions(); }, []);
+
+  // Defensive sync: always pull the full profile (including full_name and
+  // profile_picture) into the auth store on mount. This guards against the
+  // login/register response ever being out of sync with the full profile
+  // endpoint again in the future — the sidebar avatar no longer depends
+  // solely on what the login call happened to return.
+  useEffect(() => {
+    userAPI.getProfile()
+      .then((res) => {
+        updateUser({
+          full_name: res.data.full_name,
+          profile_picture: res.data.profile_picture,
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  // Load preferences once per session and apply font-size app-wide
+  useEffect(() => {
+    if (!loaded) loadPreferences();
+  }, [loaded]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-font-size', preferences.font_size);
+  }, [preferences.font_size]);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const loadSessions = async () => {
     try {
       const res = await historyAPI.getSessions();
       setSessions(res.data);
     } catch {}
+  };
+
+  const loadPreferences = async () => {
+    try {
+      const res = await userAPI.getPreferences();
+      setPreferences(res.data);
+    } catch {
+      // Non-fatal — defaults already in the store
+    } finally {
+      setLoaded(true);
+    }
   };
 
   const handleNewChat = () => {
@@ -38,7 +89,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleSessionClick = (sessionId: string) => {
-    setCurrentSession(sessionId);
+    // Don't set currentSessionId here — loadSession() on the chat page
+    // sets it after actually fetching. Setting it eagerly here caused a
+    // race: by the time the chat page's loading effect ran, currentSessionId
+    // already matched the new session (and the old messages hadn't been
+    // cleared yet), so the "should I fetch?" check saw no difference and
+    // silently skipped loading — every click after the very first one.
     router.push(`/chat?session=${sessionId}`);
     setMobileOpen(false);
   };
@@ -53,7 +109,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     } catch { toast.error('Delete failed'); }
   };
 
-  const handleLogout = () => { clearAuth(); router.push('/auth/login'); };
+  const handleLogout = async () => {
+    try { await userAPI.logout(); } catch {}
+    clearAuth();
+    // Fully reset the chat store too — otherwise messages, the session
+    // list, and the "current session" pointer from THIS account survive
+    // in memory (since logout navigates client-side, not a full page
+    // reload) and can cause the next login's history clicks to silently
+    // no-op, or briefly show the previous account's messages.
+    resetChatStore();
+    router.push('/auth/login');
+  };
 
   const themeOptions = [
     { key: 'light', icon: Sun },
@@ -67,6 +133,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...(user?.role === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
   ];
 
+  const displayName = user?.full_name || user?.name || '';
+
   const SidebarInner = () => (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
@@ -76,9 +144,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0"
               style={{ background: 'var(--accent-600)' }}>
-              <Zap className="w-3.5 h-3.5 text-white" />
+              <Wifi className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>SupportGPT</span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>NovaTech</span>
+              <span className="text-[10px] font-medium" style={{ color: 'var(--text-tertiary)', letterSpacing: '0.02em' }}>SupportGPT</span>
+            </div>
           </div>
         )}
         <button
@@ -180,28 +251,63 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* User */}
-        <div className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg ${collapsed ? 'justify-center' : ''}`}>
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
-            style={{ background: 'var(--accent-600)' }}>
-            {user?.name?.[0]?.toUpperCase()}
-          </div>
-          {!collapsed && (
-            <>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{user?.name}</p>
-                <p className="text-xs truncate capitalize" style={{ color: 'var(--text-tertiary)' }}>{user?.role}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-md transition-all"
-                style={{ color: 'var(--text-disabled)' }}
-                title="Sign out"
+        {/* User — click to open Settings/Logout dropdown */}
+        <div className="relative" ref={userMenuRef}>
+          <AnimatePresence>
+            {userMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-0 right-0 mb-2 rounded-xl overflow-hidden z-10"
+                style={{
+                  background: 'var(--bg-overlay)',
+                  border: '1px solid var(--border-default)',
+                  boxShadow: 'var(--shadow-lg)',
+                }}
               >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
+                <Link
+                  href="/settings"
+                  onClick={() => { setUserMenuOpen(false); setMobileOpen(false); }}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  <Settings className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
+                  Settings
+                </Link>
+                <div style={{ height: 1, background: 'var(--border-subtle)' }} />
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors text-left"
+                  style={{ color: 'var(--error)' }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${collapsed ? 'justify-center' : ''}`}
+            style={{ background: userMenuOpen ? 'var(--bg-subtle)' : 'transparent' }}
+          >
+            <Avatar profilePicture={user?.profile_picture} name={displayName} className="w-7 h-7" textClassName="text-xs" />
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{displayName}</p>
+                  <p className="text-xs truncate capitalize" style={{ color: 'var(--text-tertiary)' }}>{user?.role}</p>
+                </div>
+                <ChevronUp
+                  className="w-3.5 h-3.5 flex-shrink-0 transition-transform"
+                  style={{ color: 'var(--text-disabled)', transform: userMenuOpen ? 'rotate(180deg)' : 'none' }}
+                />
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -260,9 +366,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: 'var(--accent-600)' }}>
-              <Zap className="w-3 h-3 text-white" />
+              <Wifi className="w-3 h-3 text-white" />
             </div>
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>SupportGPT</span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>NovaTech</span>
+              <span className="text-[9px] font-medium" style={{ color: 'var(--text-tertiary)' }}>SupportGPT</span>
+            </div>
           </div>
         </header>
         <main className="flex-1 overflow-hidden">{children}</main>

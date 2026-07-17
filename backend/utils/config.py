@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Google Gemini
     GOOGLE_API_KEY: str = "your-google-gemini-api-key"
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     # CORS
     ALLOWED_ORIGINS: List[str] = [
@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 50
     TOP_K_RESULTS: int = 5
+
+    # RAG confidence — cosine similarity threshold (0-1) below which retrieval
+    # is considered "not confident". Used to trigger fallback disclaimers for
+    # sensitive topics (e.g. privacy) rather than presenting a weak match as
+    # if it were an authoritative answer. Tune based on your embedding model
+    # and corpus; 0.35 is a reasonable starting point for all-MiniLM-L6-v2.
+    RAG_CONFIDENCE_THRESHOLD: float = 0.35
 
     # Rate Limiting
     RATE_LIMIT: str = "60/minute"

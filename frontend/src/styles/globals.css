@@ -22,16 +22,17 @@
   --text-disabled:  #A8A8A4;
   --text-inverse:   #FFFFFF;
 
-  --accent-50:      #EEF2FF;
-  --accent-100:     #E0E7FF;
-  --accent-200:     #C7D2FE;
-  --accent-300:     #A5B4FC;
-  --accent-400:     #818CF8;
-  --accent-500:     #6366F1;
-  --accent-600:     #4F46E5;
-  --accent-700:     #4338CA;
-  --accent-800:     #3730A3;
-  --accent-900:     #312E81;
+  /* NovaTech brand — sky blue (matches Products/Pricing PDF headers) */
+  --accent-50:      #F0F9FF;
+  --accent-100:     #E0F2FE;
+  --accent-200:     #BAE6FD;
+  --accent-300:     #7DD3FC;
+  --accent-400:     #38BDF8;
+  --accent-500:     #0EA5E9;
+  --accent-600:     #0284C7;
+  --accent-700:     #0369A1;
+  --accent-800:     #075985;
+  --accent-900:     #0C4A6E;
 
   --success:        #16A34A;
   --success-bg:     #F0FDF4;
@@ -63,7 +64,7 @@
   --foreground:     20 14% 4%;
   --card:           0 0% 100%;
   --card-foreground:20 14% 4%;
-  --primary:        239 84% 60%;
+  --primary:        199 89% 48%;
   --primary-foreground: 0 0% 100%;
   --secondary:      240 5% 94%;
   --secondary-foreground: 20 14% 4%;
@@ -71,7 +72,7 @@
   --muted-foreground: 240 4% 42%;
   --border:         240 6% 88%;
   --input:          240 6% 88%;
-  --ring:           239 84% 60%;
+  --ring:           199 89% 48%;
   --radius:         0.5rem;
 }
 
@@ -109,7 +110,7 @@
   --foreground:     60 5% 93%;
   --card:           20 5% 10%;
   --card-foreground:60 5% 93%;
-  --primary:        239 84% 60%;
+  --primary:        199 89% 48%;
   --primary-foreground: 0 0% 100%;
   --secondary:      20 4% 14%;
   --secondary-foreground: 60 5% 93%;
@@ -117,8 +118,20 @@
   --muted-foreground: 240 4% 48%;
   --border:         20 4% 22%;
   --input:          20 4% 22%;
-  --ring:           239 84% 60%;
+  --ring:           199 89% 48%;
 }
+
+/* ─── Font size preference ─────────────────────────────────────────────────── *
+ * Scales the ROOT font-size (not body). rem units are always relative to the
+ * root element, so this genuinely scales Tailwind's utility classes AND the
+ * custom rem-based classes below (.btn, .badge, .chat-prose, etc.) together —
+ * text, icons, and spacing all move as one, the same way OS-level "larger
+ * text" accessibility settings work. Set via data-font-size on <html>,
+ * driven by AppLayout.tsx reading the user's preference.
+ */
+html[data-font-size="small"]  { font-size: 90%; }
+html[data-font-size="medium"] { font-size: 100%; }
+html[data-font-size="large"]  { font-size: 120%; }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
@@ -128,13 +141,14 @@ html {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   scroll-behavior: smooth;
+  transition: font-size var(--duration-base) var(--ease-smooth);
 }
 
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
+  font-size: 0.875rem; /* 14px at 100% root */
   line-height: 1.5;
   transition: background-color var(--duration-slow) var(--ease-smooth),
               color var(--duration-slow) var(--ease-smooth);
@@ -187,12 +201,12 @@ body {
 /* ─── Input ───────────────────────────────────────────────────────────────── */
 .input-premium {
   width: 100%;
-  padding: 10px 14px;
+  padding: 0.625rem 0.875rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 0.875rem; /* 14px */
   font-family: 'Inter', sans-serif;
   line-height: 1.5;
   transition: border-color var(--duration-fast) var(--ease-smooth),
@@ -207,7 +221,7 @@ body {
 .input-premium:focus {
   outline: none;
   border-color: var(--accent-500);
-  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.15);
+  box-shadow: 0 0 0 3px rgb(14 165 233 / 0.15);
 }
 
 .dark .input-premium {
@@ -219,7 +233,7 @@ body {
 .dark .input-premium:focus {
   background: var(--bg-elevated);
   border-color: var(--accent-400);
-  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.2);
+  box-shadow: 0 0 0 3px rgb(14 165 233 / 0.2);
 }
 
 /* ─── Button ──────────────────────────────────────────────────────────────── */
@@ -227,8 +241,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 0.375rem;
+  font-size: 0.8125rem; /* 13px */
   font-weight: 500;
   font-family: 'Inter', sans-serif;
   border-radius: var(--radius-md);
@@ -243,9 +257,9 @@ body {
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
-.btn-sm  { padding: 5px 10px; font-size: 12px; }
-.btn-md  { padding: 9px 16px; }
-.btn-lg  { padding: 11px 20px; font-size: 15px; }
+.btn-sm  { padding: 0.3125rem 0.625rem; font-size: 0.75rem; }   /* 12px */
+.btn-md  { padding: 0.5625rem 1rem; }
+.btn-lg  { padding: 0.6875rem 1.25rem; font-size: 0.9375rem; }  /* 15px */
 
 .btn-primary {
   background: var(--accent-600);
@@ -300,20 +314,21 @@ body {
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: 0.6875rem; /* 11px */
   font-weight: 500;
   letter-spacing: 0.01em;
   border: 1px solid transparent;
 }
 
-/* Light */
+/* Light — kept distinct per-agent semantic colors (not brand colors) */
 .badge-billing   { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
 .badge-technical { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
 .badge-product   { background: #F0FDF4; color: #14532D; border-color: #BBF7D0; }
 .badge-complaint { background: #FEF2F2; color: #991B1B; border-color: #FECACA; }
+.badge-privacy   { background: #ECFEFF; color: #155E63; border-color: #A5F3FC; }
 .badge-faq       { background: #F5F3FF; color: #4C1D95; border-color: #DDD6FE; }
 
 /* Dark */
@@ -321,6 +336,7 @@ body {
 .dark .badge-technical { background: rgba(59,130,246,0.12); color: #93C5FD; border-color: rgba(59,130,246,0.3); }
 .dark .badge-product   { background: rgba(34,197,94,0.12); color: #86EFAC; border-color: rgba(34,197,94,0.3); }
 .dark .badge-complaint { background: rgba(239,68,68,0.12); color: #FCA5A5; border-color: rgba(239,68,68,0.3); }
+.dark .badge-privacy   { background: rgba(6,182,212,0.12); color: #67E8F9; border-color: rgba(6,182,212,0.3); }
 .dark .badge-faq       { background: rgba(139,92,246,0.12); color: #C4B5FD; border-color: rgba(139,92,246,0.3); }
 
 /* ─── Animations ──────────────────────────────────────────────────────────── */
@@ -372,24 +388,24 @@ body {
 
 /* ─── Chat Markdown ───────────────────────────────────────────────────────── */
 .chat-prose {
-  font-size: 14px;
+  font-size: 0.875rem; /* 14px */
   line-height: 1.65;
   color: var(--text-primary);
 }
-.chat-prose p { margin-bottom: 10px; }
+.chat-prose p { margin-bottom: 0.625rem; }
 .chat-prose p:last-child { margin-bottom: 0; }
-.chat-prose ul, .chat-prose ol { margin: 8px 0 8px 16px; }
-.chat-prose li { margin-bottom: 4px; }
+.chat-prose ul, .chat-prose ol { margin: 0.5rem 0 0.5rem 1rem; }
+.chat-prose li { margin-bottom: 0.25rem; }
 .chat-prose ul li { list-style: disc; }
 .chat-prose ol li { list-style: decimal; }
 .chat-prose strong { font-weight: 600; color: var(--text-primary); }
 .chat-prose em { font-style: italic; color: var(--text-secondary); }
 .chat-prose code {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 12px;
+  font-size: 0.75rem; /* 12px */
   background: var(--bg-muted);
   color: var(--text-primary);
-  padding: 2px 6px;
+  padding: 0.125rem 0.375rem;
   border-radius: 4px;
   border: 1px solid var(--border-subtle);
 }
@@ -397,31 +413,31 @@ body {
   background: var(--bg-muted);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 14px;
+  padding: 0.875rem;
   overflow-x: auto;
-  margin: 10px 0;
+  margin: 0.625rem 0;
 }
 .chat-prose pre code {
   background: none;
   border: none;
   padding: 0;
-  font-size: 13px;
+  font-size: 0.8125rem; /* 13px */
   color: var(--text-primary);
 }
 .chat-prose h1, .chat-prose h2, .chat-prose h3 {
   font-weight: 600;
   color: var(--text-primary);
-  margin: 14px 0 6px;
+  margin: 0.875rem 0 0.375rem;
 }
-.chat-prose h1 { font-size: 16px; }
-.chat-prose h2 { font-size: 15px; }
-.chat-prose h3 { font-size: 14px; }
+.chat-prose h1 { font-size: 1rem; }      /* 16px */
+.chat-prose h2 { font-size: 0.9375rem; } /* 15px */
+.chat-prose h3 { font-size: 0.875rem; }  /* 14px */
 .chat-prose blockquote {
   border-left: 3px solid var(--accent-400);
-  padding-left: 12px;
+  padding-left: 0.75rem;
   color: var(--text-secondary);
   font-style: italic;
-  margin: 10px 0;
+  margin: 0.625rem 0;
 }
 .chat-prose a {
   color: var(--accent-500);
@@ -431,16 +447,16 @@ body {
 .chat-prose hr {
   border: none;
   border-top: 1px solid var(--border-subtle);
-  margin: 14px 0;
+  margin: 0.875rem 0;
 }
 .chat-prose table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
-  margin: 10px 0;
+  font-size: 0.8125rem; /* 13px */
+  margin: 0.625rem 0;
 }
 .chat-prose th, .chat-prose td {
-  padding: 8px 12px;
+  padding: 0.5rem 0.75rem;
   border: 1px solid var(--border-subtle);
   text-align: left;
   color: var(--text-primary);
@@ -455,10 +471,10 @@ body {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 0.8125rem; /* 13px */
   font-weight: 450;
   color: var(--text-tertiary);
   cursor: pointer;

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Loader2, ArrowRight, Zap, Check, Sun, Moon, Monitor } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Wifi, Check, Sun, Moon, Monitor } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
@@ -91,17 +91,22 @@ export default function RegisterPage() {
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 py-4">
-        {/* Logo */}
+        {/* Logo — NovaTech (company) + SupportGPT (the AI service) */}
         <div className="flex items-center gap-2">
           <div
             className="w-7 h-7 rounded-md flex items-center justify-center"
             style={{ background: 'var(--accent-600)' }}
           >
-            <Zap className="w-3.5 h-3.5 text-white" />
+            <Wifi className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            SupportGPT
-          </span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+              NovaTech Solutions
+            </span>
+            <span className="text-[10px] font-medium" style={{ color: 'var(--accent-500)' }}>
+              SupportGPT
+            </span>
+          </div>
         </div>
 
         {/* Theme toggle */}
@@ -123,7 +128,7 @@ export default function RegisterPage() {
             Create account
           </h2>
           <p className="text-sm mb-8" style={{ color: 'var(--text-tertiary)' }}>
-            Get started with AI-powered customer support.
+            Get support for your NovaTech devices and orders.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -153,7 +158,7 @@ export default function RegisterPage() {
                 className="block text-xs font-medium mb-1.5"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                Work email
+                Email
               </label>
               <input
                 type="email"
@@ -161,7 +166,7 @@ export default function RegisterPage() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="input-premium"
-                placeholder="alex@company.com"
+                placeholder="alex@example.com"
                 autoComplete="email"
               />
             </div>
@@ -198,7 +203,6 @@ export default function RegisterPage() {
               {/* Strength indicator */}
               {form.password && (
                 <div className="mt-3 space-y-2">
-                  {/* Bars */}
                   <div className="flex gap-1.5">
                     {[1, 2, 3].map((i) => (
                       <div
@@ -210,8 +214,6 @@ export default function RegisterPage() {
                       />
                     ))}
                   </div>
-
-                  {/* Checklist */}
                   <div className="space-y-1.5 pt-0.5">
                     {checks.map(({ label, pass }) => (
                       <div key={label} className="flex items-center gap-2">

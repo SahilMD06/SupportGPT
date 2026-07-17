@@ -1,495 +1,454 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Shield, Upload, RefreshCw, Users, FileText, MessageSquare,
-  Trash2, Database, Loader2, X, File, CheckCircle2, AlertCircle,
-  ChevronRight, MoreHorizontal
+  FileText, Users, MessageSquare, Database, Upload, Trash2, RefreshCw,
+  Loader2, Shield, ShieldOff, CheckCircle2, AlertCircle, LayoutGrid,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import AppLayout from '@/components/layout/AppLayout';
 import { adminAPI, knowledgeAPI } from '@/lib/api';
-import { useAuthStore } from '@/lib/store';
-import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { getErrorMessage } from '@/lib/errors';
 
 type Tab = 'overview' | 'documents' | 'users' | 'conversations';
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function TabButton({ active, onClick, icon: Icon, label }: {
+  active: boolean; onClick: () => void; icon: any; label: string;
+}) {
   return (
     <button
       onClick={onClick}
-      className="px-3 py-1.5 text-sm font-medium rounded-lg transition-all"
+      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap flex-shrink-0"
       style={{
         background: active ? 'var(--bg-elevated)' : 'transparent',
         color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
         boxShadow: active ? 'var(--shadow-xs)' : 'none',
       }}
     >
-      {children}
+      <Icon className="w-3.5 h-3.5" />
+      {label}
     </button>
   );
 }
 
-function StatBadge({ label, value, icon: Icon }: { label: string; value: number; icon: any }) {
+function StatCard({ icon: Icon, label, value, color = '#0EA5E9' }: {
+  icon: any; label: string; value: string | number; color?: string;
+}) {
   return (
-    <div className="card p-4 flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: 'var(--accent-600)15' }}>
-        <Icon className="w-4 h-4" style={{ color: 'var(--accent-600)' }} />
+    <div className="card p-5">
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-4"
+        style={{ background: `${color}15` }}>
+        <Icon className="w-4.5 h-4.5" style={{ color }} />
       </div>
-      <div>
-        <p className="text-xl font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-          {value?.toLocaleString() ?? '—'}
-        </p>
-        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{label}</p>
-      </div>
+      <p className="text-2xl font-semibold mb-0.5" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+        {value}
+      </p>
+      <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</p>
     </div>
   );
 }
 
-function UploadZone({ onSuccess }: { onSuccess: () => void }) {
-  const [dragging, setDragging] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<Record<string, 'pending' | 'done' | 'error'>>({});
-  const inputRef = useRef<HTMLInputElement>(null);
+// ─── Overview Tab ───────────────────────────────────────────────────────────
 
-  const addFiles = (fl: FileList | null) => {
-    if (!fl) return;
-    const pdfs = Array.from(fl).filter((f) => f.type === 'application/pdf');
-    if (pdfs.length < fl.length) toast.error('Only PDF files are accepted');
-    setFiles((prev) => [...prev, ...pdfs]);
-  };
-
-  const remove = (i: number) => setFiles(files.filter((_, j) => j !== i));
-
-  const upload = async () => {
-    if (!files.length) return;
-    setUploading(true);
-    const p: Record<string, 'pending' | 'done' | 'error'> = {};
-    files.forEach((f) => { p[f.name] = 'pending'; });
-    setProgress(p);
-
-    let ok = 0;
-    for (const file of files) {
-      try {
-        const fd = new FormData();
-        fd.append('file', file);
-        await knowledgeAPI.upload(fd);
-        setProgress((prev) => ({ ...prev, [file.name]: 'done' }));
-        ok++;
-      } catch {
-        setProgress((prev) => ({ ...prev, [file.name]: 'error' }));
-      }
-    }
-
-    setUploading(false);
-    if (ok > 0) {
-      toast.success(`${ok} file${ok > 1 ? 's' : ''} uploaded`);
-      setTimeout(() => { setFiles([]); setProgress({}); onSuccess(); }, 1200);
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
-        onClick={() => inputRef.current?.click()}
-        className="rounded-xl p-8 text-center cursor-pointer transition-all"
-        style={{
-          border: `2px dashed ${dragging ? 'var(--accent-500)' : 'var(--border-default)'}`,
-          background: dragging ? 'var(--accent-50)' : 'var(--bg-subtle)',
-        }}
-      >
-        <Upload className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--text-disabled)' }} />
-        <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-          Drop PDF files here
-        </p>
-        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-          or click to browse · Max 50MB per file
-        </p>
-        <input ref={inputRef} type="file" multiple accept=".pdf" className="hidden" onChange={(e) => addFiles(e.target.files)} />
-      </div>
-
-      {files.length > 0 && (
-        <div className="space-y-2">
-          {files.map((f, i) => {
-            const state = progress[f.name];
-            return (
-              <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)' }}>
-                <File className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-500)' }} />
-                <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{f.name}</span>
-                <span className="text-xs flex-shrink-0" style={{ color: 'var(--text-disabled)' }}>
-                  {(f.size / 1024).toFixed(0)} KB
-                </span>
-                {state === 'done' && <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: '#16A34A' }} />}
-                {state === 'error' && <AlertCircle className="w-4 h-4 flex-shrink-0" style={{ color: '#DC2626' }} />}
-                {!state && (
-                  <button onClick={(e) => { e.stopPropagation(); remove(i); }} className="btn btn-ghost p-0.5">
-                    <X className="w-3.5 h-3.5" style={{ color: 'var(--text-disabled)' }} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-          <button
-            onClick={upload}
-            disabled={uploading}
-            className="btn btn-primary btn-md w-full"
-          >
-            {uploading
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
-              : <><Upload className="w-3.5 h-3.5" /> Upload {files.length} file{files.length > 1 ? 's' : ''}</>
-            }
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function AdminPage() {
-  const { user } = useAuthStore();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+function OverviewTab() {
   const [stats, setStats] = useState<any>(null);
-  const [docs, setDocs] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [convs, setConvs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [rebuilding, setRebuilding] = useState(false);
 
-  useEffect(() => {
-    if (user && user.role !== 'admin') { router.replace('/chat'); return; }
-    loadAll();
-  }, [user]);
-
-  const loadAll = async () => {
+  const load = async () => {
     setLoading(true);
     try {
-      const [s, d, u, c] = await Promise.all([
-        adminAPI.getStats(),
-        knowledgeAPI.list(),
-        adminAPI.listUsers(),
-        adminAPI.listConversations(),
-      ]);
-      setStats(s.data);
-      setDocs(d.data);
-      setUsers(u.data);
-      setConvs(c.data);
-    } catch { toast.error('Failed to load admin data'); }
-    finally { setLoading(false); }
+      const res = await adminAPI.getStats();
+      console.log('[Admin Overview] Raw /admin/stats response:', res.data);
+      setStats(res.data);
+    } catch {
+      toast.error('Failed to load stats');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => { load(); }, []);
 
   const handleRebuild = async () => {
     setRebuilding(true);
     try {
       const res = await adminAPI.rebuildEmbeddings();
-      toast.success(`Rebuilt: ${res.data.chunks_created} chunks from ${res.data.documents_processed} docs`);
-      await loadAll();
-    } catch (e: any) {
-      toast.error(e.response?.data?.detail || 'Rebuild failed');
-    } finally { setRebuilding(false); }
+      toast.success(res.data.message || 'Vector index rebuilt successfully');
+      load();
+    } catch (err: any) {
+      toast.error(getErrorMessage(err, 'Rebuild failed'));
+    } finally {
+      setRebuilding(false);
+    }
   };
 
-  const handleDeleteDoc = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"?`)) return;
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-28 rounded-xl" />)}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={FileText} label="Documents"
+          value={stats?.document_count ?? stats?.total_documents ?? stats?.documents ?? stats?.num_documents ?? 0}
+          color="#0EA5E9" />
+        <StatCard icon={Database} label="Indexed Chunks"
+          value={stats?.chunk_count ?? stats?.total_chunks ?? stats?.chunks ?? 0}
+          color="#10B981" />
+        <StatCard icon={Users} label="Total Users"
+          value={stats?.user_count ?? stats?.total_users ?? stats?.users ?? 0}
+          color="#F59E0B" />
+        <StatCard icon={MessageSquare} label="Conversations"
+          value={stats?.conversation_count ?? stats?.total_conversations ?? stats?.conversations ?? 0}
+          color="#8B5CF6" />
+      </div>
+
+      <div className="card p-5">
+        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Vector Index</h3>
+        <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
+          Rebuild after uploading or deleting any knowledge base document — changes are not
+          reflected automatically.
+        </p>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          <span className="badge" style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+            Embedding model: {stats?.embedding_model ?? stats?.model ?? 'all-MiniLM-L6-v2'}
+          </span>
+          <span className="badge" style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+            Confidence threshold: {stats?.confidence_threshold ?? stats?.rag_confidence_threshold ?? '0.35'}
+          </span>
+          <span className="badge" style={{
+            background: (stats?.index_loaded ?? true) ? 'var(--success-bg)' : 'var(--error-bg)',
+            color: (stats?.index_loaded ?? true) ? 'var(--success)' : 'var(--error)',
+            border: `1px solid ${(stats?.index_loaded ?? true) ? 'rgba(22,163,74,0.25)' : 'rgba(220,38,38,0.25)'}`,
+          }}>
+            {(stats?.index_loaded ?? true) ? 'Index loaded' : 'Index not loaded'}
+          </span>
+        </div>
+
+        <button onClick={handleRebuild} disabled={rebuilding} className="btn btn-primary btn-md">
+          {rebuilding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          Rebuild Vector Index
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Documents Tab ──────────────────────────────────────────────────────────
+
+function DocumentsTab() {
+  const [docs, setDocs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await knowledgeAPI.list();
+      setDocs(res.data);
+    } catch {
+      toast.error('Failed to load documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        await knowledgeAPI.upload(formData);
+      }
+      toast.success(`Uploaded ${files.length} document${files.length > 1 ? 's' : ''}`);
+      load();
+    } catch (err: any) {
+      toast.error(getErrorMessage(err, 'Upload failed'));
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDelete = async (id: string, filename: string) => {
     try {
       await knowledgeAPI.delete(id);
       setDocs(docs.filter((d) => d.id !== id));
-      toast.success('Document deleted');
-    } catch { toast.error('Delete failed'); }
+      toast.success(`${filename} deleted — remember to rebuild the index`);
+    } catch {
+      toast.error('Delete failed');
+    }
   };
 
-  const handleRoleChange = async (userId: string, role: string) => {
+  return (
+    <div className="space-y-4">
+      <div className="card p-5">
+        <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Upload Documents</h3>
+        <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
+          PDF files only. Upload, then go to Overview to rebuild the index.
+        </p>
+        <label className="btn btn-primary btn-md inline-flex cursor-pointer">
+          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          {uploading ? 'Uploading...' : 'Upload PDF(s)'}
+          <input type="file" accept=".pdf" multiple onChange={handleUpload} className="hidden" disabled={uploading} />
+        </label>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+            Knowledge Base ({docs.length})
+          </h3>
+        </div>
+        {loading ? (
+          <div className="p-5 space-y-3">
+            {[...Array(3)].map((_, i) => <div key={i} className="skeleton h-12 rounded-lg" />)}
+          </div>
+        ) : docs.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No documents uploaded yet</p>
+          </div>
+        ) : (
+          docs.map((doc, i) => (
+            <div key={doc.id}
+              className="flex items-center gap-4 px-5 py-3.5"
+              style={{ borderBottom: i < docs.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
+            >
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--bg-subtle)' }}>
+                <FileText className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{doc.filename}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  {doc.chunk_count ? `${doc.chunk_count} chunks · ` : ''}
+                  {new Date(doc.upload_date).toLocaleDateString()}
+                </p>
+              </div>
+              <span className="badge" style={{
+                background: doc.status === 'processed' ? 'var(--success-bg)' : 'var(--warning-bg)',
+                color: doc.status === 'processed' ? 'var(--success)' : 'var(--warning)',
+                border: `1px solid ${doc.status === 'processed' ? 'rgba(22,163,74,0.25)' : 'rgba(217,119,6,0.25)'}`,
+              }}>
+                {doc.status === 'processed' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                {doc.status || 'pending'}
+              </span>
+              <button
+                onClick={() => handleDelete(doc.id, doc.filename)}
+                className="p-1.5 rounded-md transition-colors flex-shrink-0"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Users Tab ──────────────────────────────────────────────────────────────
+
+function UsersTab() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
     try {
-      await adminAPI.updateUserRole(userId, role);
-      setUsers(users.map((u) => u.id === userId ? { ...u, role } : u));
-      toast.success('Role updated');
-    } catch { toast.error('Failed to update role'); }
+      const res = await adminAPI.listUsers();
+      setUsers(res.data);
+    } catch {
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'documents', label: `Documents (${docs.length})` },
-    { id: 'users', label: `Users (${users.length})` },
-    { id: 'conversations', label: 'Conversations' },
+  useEffect(() => { load(); }, []);
+
+  const toggleRole = async (userId: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'user' : 'admin';
+    setUpdating(userId);
+    try {
+      await adminAPI.updateUserRole(userId, newRole);
+      setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+      toast.success(`Role updated to ${newRole}`);
+    } catch {
+      toast.error('Failed to update role');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+          Users ({users.length})
+        </h3>
+      </div>
+      {loading ? (
+        <div className="p-5 space-y-3">
+          {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-12 rounded-lg" />)}
+        </div>
+      ) : (
+        users.map((u, i) => (
+          <div key={u.id}
+            className="flex items-center gap-4 px-5 py-3.5"
+            style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+              style={{ background: 'var(--accent-600)' }}>
+              {u.name?.[0]?.toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{u.name}</p>
+              <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>{u.email}</p>
+            </div>
+            <span className="badge" style={{
+              background: u.role === 'admin' ? 'var(--accent-50)' : 'var(--bg-subtle)',
+              color: u.role === 'admin' ? 'var(--accent-700)' : 'var(--text-tertiary)',
+              border: `1px solid ${u.role === 'admin' ? 'var(--accent-200)' : 'var(--border-subtle)'}`,
+            }}>
+              {u.role}
+            </span>
+            <button
+              onClick={() => toggleRole(u.id, u.role)}
+              disabled={updating === u.id}
+              className="btn btn-secondary btn-sm flex-shrink-0"
+            >
+              {updating === u.id ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : u.role === 'admin' ? (
+                <><ShieldOff className="w-3 h-3" /> Revoke admin</>
+              ) : (
+                <><Shield className="w-3 h-3" /> Make admin</>
+              )}
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ─── Conversations Tab ──────────────────────────────────────────────────────
+
+function ConversationsTab() {
+  const [convs, setConvs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    adminAPI.listConversations()
+      .then((res) => setConvs(res.data))
+      .catch(() => toast.error('Failed to load conversations'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+          Recent Conversations ({convs.length})
+        </h3>
+      </div>
+      {loading ? (
+        <div className="p-5 space-y-3">
+          {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-12 rounded-lg" />)}
+        </div>
+      ) : convs.length === 0 ? (
+        <div className="py-12 text-center">
+          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No conversations yet</p>
+        </div>
+      ) : (
+        convs.map((c, i) => (
+          <div key={c.session_id}
+            className="flex items-center gap-4 px-5 py-3.5"
+            style={{ borderBottom: i < convs.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
+          >
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--bg-subtle)' }}>
+              <MessageSquare className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                {c.user_name || c.user_id}
+              </p>
+              <p className="text-xs truncate" style={{ color: 'var(--text-tertiary)' }}>
+                {c.message_count ?? c.messages?.length ?? 0} messages · {new Date(c.updated_at).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ──────────────────────────────────────────────────────────────
+
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
+
+  const tabs: { id: Tab; label: string; icon: any }[] = [
+    { id: 'overview', label: 'Overview', icon: LayoutGrid },
+    { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'conversations', label: 'Conversations', icon: MessageSquare },
   ];
 
   return (
     <AppLayout>
       <div className="h-full overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-6">
-
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-7">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: '#F59E0B20' }}>
-              <Shield className="w-4.5 h-4.5" style={{ color: '#F59E0B' }} />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                Admin
-              </h1>
-              <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-                Manage your SupportGPT platform
-              </p>
-            </div>
+          <div className="mb-6">
+            <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              Admin
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+              Manage the SupportGPT platform powering NovaTech Solutions support
+            </p>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 p-1 rounded-xl mb-6 w-fit"
+          <div className="flex gap-1 p-1 rounded-xl mb-6 overflow-x-auto"
             style={{ background: 'var(--bg-subtle)' }}>
             {tabs.map((t) => (
-              <TabButton key={t.id} active={activeTab === t.id} onClick={() => setActiveTab(t.id)}>
-                {t.label}
-              </TabButton>
+              <TabButton
+                key={t.id}
+                active={activeTab === t.id}
+                onClick={() => setActiveTab(t.id)}
+                icon={t.icon}
+                label={t.label}
+              />
             ))}
           </div>
 
-          {loading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="card p-4 h-20 skeleton" />
-              ))}
-            </div>
-          ) : (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {/* ── Overview ── */}
-                {activeTab === 'overview' && (
-                  <div className="space-y-5">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      <StatBadge label="Total Users" value={stats?.total_users} icon={Users} />
-                      <StatBadge label="Conversations" value={stats?.total_conversations} icon={MessageSquare} />
-                      <StatBadge label="Documents" value={stats?.total_documents} icon={FileText} />
-                      <StatBadge label="Chat Events" value={stats?.total_chat_events} icon={Database} />
-                    </div>
-
-                    {/* Vector index card */}
-                    <div className="card p-5">
-                      <div className="flex items-start justify-between mb-5">
-                        <div>
-                          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                            Vector Index
-                          </h3>
-                          <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                            FAISS index for semantic search
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
-                          style={{
-                            background: stats?.faiss_index?.index_loaded ? '#10B98115' : '#EF444415',
-                            color: stats?.faiss_index?.index_loaded ? '#10B981' : '#EF4444',
-                          }}>
-                          <div className="w-1.5 h-1.5 rounded-full"
-                            style={{ background: stats?.faiss_index?.index_loaded ? '#10B981' : '#EF4444' }} />
-                          {stats?.faiss_index?.index_loaded ? 'Loaded' : 'Not loaded'}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4 mb-5">
-                        {[
-                          { label: 'Chunks', value: stats?.faiss_index?.total_chunks ?? 0 },
-                          { label: 'Documents', value: stats?.total_documents ?? 0 },
-                          { label: 'Model', value: 'MiniLM-L6' },
-                        ].map(({ label, value }) => (
-                          <div key={label} className="rounded-lg p-3 text-center"
-                            style={{ background: 'var(--bg-subtle)' }}>
-                            <p className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{value}</p>
-                            <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{label}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={handleRebuild}
-                        disabled={rebuilding}
-                        className="btn btn-primary btn-md w-full"
-                      >
-                        {rebuilding
-                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Rebuilding index...</>
-                          : <><RefreshCw className="w-3.5 h-3.5" /> Rebuild vector index</>
-                        }
-                      </button>
-                    </div>
-
-                    {/* Upload */}
-                    <div className="card p-5">
-                      <h3 className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                        Upload Documents
-                      </h3>
-                      <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>
-                        Add PDFs to the knowledge base — FAQ, pricing, policies, manuals
-                      </p>
-                      <UploadZone onSuccess={loadAll} />
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Documents ── */}
-                {activeTab === 'documents' && (
-                  <div className="space-y-4">
-                    <div className="card p-5">
-                      <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                        Upload new document
-                      </h3>
-                      <UploadZone onSuccess={loadAll} />
-                    </div>
-
-                    <div className="card overflow-hidden">
-                      <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                          Knowledge base · {docs.length} files
-                        </h3>
-                      </div>
-                      {docs.length === 0 ? (
-                        <div className="py-16 text-center">
-                          <FileText className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--text-disabled)' }} />
-                          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No documents yet</p>
-                          <p className="text-xs mt-1" style={{ color: 'var(--text-disabled)' }}>
-                            Upload PDFs to enable knowledge retrieval
-                          </p>
-                        </div>
-                      ) : (
-                        <div>
-                          {docs.map((doc, i) => (
-                            <div key={doc.id}
-                              className="flex items-center gap-4 px-5 py-3.5 transition-colors"
-                              style={{
-                                borderBottom: i < docs.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                              }}
-                            >
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                                style={{ background: 'var(--accent-600)15' }}>
-                                <FileText className="w-4 h-4" style={{ color: 'var(--accent-600)' }} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-                                  {doc.filename}
-                                </p>
-                                <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                                  {doc.chunk_count} chunks · {(doc.file_size / 1024).toFixed(0)} KB · {new Date(doc.upload_date).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                                style={{ background: '#10B98115', color: '#10B981' }}>
-                                {doc.status}
-                              </span>
-                              <button
-                                onClick={() => handleDeleteDoc(doc.id, doc.filename)}
-                                className="btn btn-ghost p-1.5"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--text-disabled)' }} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Users ── */}
-                {activeTab === 'users' && (
-                  <div className="card overflow-hidden">
-                    <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        Users · {users.length}
-                      </h3>
-                    </div>
-                    {users.length === 0 ? (
-                      <div className="py-16 text-center">
-                        <Users className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--text-disabled)' }} />
-                        <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No users found</p>
-                      </div>
-                    ) : (
-                      users.map((u, i) => (
-                        <div key={u.id}
-                          className="flex items-center gap-4 px-5 py-3.5"
-                          style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
-                        >
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
-                            style={{ background: 'var(--accent-600)' }}>
-                            {u.name?.[0]?.toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.name}</p>
-                            <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{u.email}</p>
-                          </div>
-                          <p className="text-xs hidden sm:block" style={{ color: 'var(--text-disabled)' }}>
-                            {new Date(u.created_at).toLocaleDateString()}
-                          </p>
-                          <select
-                            value={u.role}
-                            onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                            className="text-xs rounded-lg px-2.5 py-1.5 font-medium transition-colors focus:outline-none"
-                            style={{
-                              background: 'var(--bg-subtle)',
-                              border: '1px solid var(--border-default)',
-                              color: 'var(--text-primary)',
-                            }}
-                          >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {/* ── Conversations ── */}
-                {activeTab === 'conversations' && (
-                  <div className="card overflow-hidden">
-                    <div className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        Recent conversations · {convs.length}
-                      </h3>
-                    </div>
-                    {convs.length === 0 ? (
-                      <div className="py-16 text-center">
-                        <MessageSquare className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--text-disabled)' }} />
-                        <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>No conversations yet</p>
-                      </div>
-                    ) : (
-                      convs.map((c, i) => (
-                        <div key={c.id}
-                          className="flex items-center gap-4 px-5 py-3.5"
-                          style={{ borderBottom: i < convs.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
-                        >
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{ background: 'var(--bg-subtle)' }}>
-                            <MessageSquare className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-mono truncate" style={{ color: 'var(--text-primary)' }}>
-                              {c.session_id}
-                            </p>
-                            <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                              {c.message_count} messages · User: {c.user_id?.slice(0, 8)}...
-                            </p>
-                          </div>
-                          <p className="text-xs flex-shrink-0" style={{ color: 'var(--text-disabled)' }}>
-                            {new Date(c.updated_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {activeTab === 'overview' && <OverviewTab />}
+              {activeTab === 'documents' && <DocumentsTab />}
+              {activeTab === 'users' && <UsersTab />}
+              {activeTab === 'conversations' && <ConversationsTab />}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </AppLayout>

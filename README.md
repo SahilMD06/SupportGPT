@@ -1,420 +1,246 @@
 # SupportGPT — Multi-Agent AI Customer Support Platform
 
-<div align="center">
-
-![SupportGPT Banner](https://img.shields.io/badge/SupportGPT-Multi--Agent%20AI-6471f1?style=for-the-badge&logo=robot)
-![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi)
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)
-![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
-
-**Production-ready Multi-Agent AI Customer Support Platform with RAG, streaming responses, and real-time analytics.**
-
-</div>
+An AI-powered customer support platform built for **NovaTech Solutions** (a fictional consumer electronics and smart home company), featuring six specialized AI agents, Retrieval-Augmented Generation (RAG) over a custom knowledge base, multilingual conversations, sentiment-aware routing, and a full admin dashboard.
 
 ---
 
-## ✨ Features
+## Project Overview
 
-| Feature | Details |
-|---------|---------|
-| 🤖 **Multi-Agent Routing** | 5 specialized agents: Billing, Technical, Product, Complaint, FAQ |
-| 🧠 **Intent Classification** | Gemini 2.5 Flash detects single & multi-intent queries |
-| 📚 **RAG Pipeline** | FAISS + Sentence Transformers for semantic retrieval |
-| 🌊 **Streaming Responses** | Real-time SSE token streaming |
-| 🔐 **JWT Authentication** | Secure register/login with bcrypt password hashing |
-| 📊 **Analytics Dashboard** | Charts for agent usage, intent distribution, daily chats |
-| 🛡️ **Admin Panel** | PDF uploads, embedding rebuilds, user management |
-| 💾 **Conversation History** | Persistent MongoDB storage with session management |
-| 🎨 **Premium Dark UI** | Next.js 15 + Tailwind + Framer Motion |
-| 🐳 **Docker Ready** | Full docker-compose for local & production |
+SupportGPT replaces the single-bot support model with a **multi-agent architecture**: every customer message is analyzed for intent, language, and sentiment in a single pass, then routed to one or more specialist agents (Billing, Technical, Product, Complaint, Privacy, FAQ). Responses are grounded in the company's actual policy documents through a FAISS-based RAG pipeline, so answers cite real sources instead of hallucinating policy details. When retrieval confidence is low on sensitive topics, the system clearly labels responses as general guidance rather than official policy.
 
----
+**SupportGPT** is the underlying platform; **NovaTech Solutions** is the customer-facing brand it powers — analogous to how support platforms like Zendesk power a company's branded help experience.
 
-## 🏗️ Architecture
+## Features
 
-```
-Customer Query
-      │
-      ▼
-┌─────────────┐
-│  Next.js UI │  ← Streaming SSE responses
-└──────┬──────┘
-       │ REST / SSE
-       ▼
-┌─────────────────────────────────────────┐
-│              FastAPI Backend            │
-│                                         │
-│  ┌─────────────┐   ┌────────────────┐  │
-│  │ JWT Auth    │   │ Rate Limiting  │  │
-│  └─────────────┘   └────────────────┘  │
-│                                         │
-│  ┌──────────────────────────────────┐  │
-│  │     Intent Classifier            │  │
-│  │   (Gemini 2.5 Flash)            │  │
-│  └──────────────┬───────────────────┘  │
-│                 │ intents[]             │
-│  ┌──────────────▼───────────────────┐  │
-│  │        Agent Router              │  │
-│  └──┬───┬───┬───┬───────────────────┘  │
-│     │   │   │   │                      │
-│  Billing Tech Product Complaint FAQ    │
-│     │   │   │   │                      │
-│  ┌──▼───▼───▼───▼───────────────────┐  │
-│  │     RAG Pipeline                 │  │
-│  │  FAISS → Embeddings → Context   │  │
-│  └──────────────┬────────────────── ┘  │
-│                 │                      │
-│  ┌──────────────▼───────────────────┐  │
-│  │  Gemini 2.5 Flash Response       │  │
-│  └──────────────────────────────────┘  │
-└─────────────────────────────────────────┘
-       │
-       ▼
-  MongoDB Atlas  (conversations, analytics)
-  FAISS Index    (vector embeddings)
-```
+- **Multi-agent routing** — automatic multi-intent classification across 6 specialist agents, with response synthesis when a query spans multiple domains
+- **RAG pipeline** — PDF text extraction, chunking, Sentence Transformer embeddings, FAISS vector search, and source citations on every grounded answer
+- **Confidence-aware privacy handling** — privacy/security questions prioritize PrivacyPolicy.pdf retrieval; low-confidence matches trigger a clearly-labeled general-knowledge fallback instead of invented policy
+- **Multilingual conversations** — automatic language detection, English-translated retrieval against the English knowledge base, and responses in the customer's language (or a fixed language preference)
+- **Sentiment-aware routing** — per-message frustration scoring (1–5); high frustration auto-includes the Complaint agent and an empathy-first response style
+- **Real-time streaming** — Server-Sent Events token streaming with live agent/language/source badges
+- **Full authentication** — JWT auth with token versioning (logout from all devices), session tracking with device/IP, password change, account deletion, and data export
+- **User settings** — profile management, theme (light/dark/system), font scaling, response length, response language, citation and suggestion toggles
+- **Admin dashboard** — knowledge base upload/delete/rebuild, user role management, conversation overview, index statistics
+- **Analytics** — chats over time, agent/intent distribution, response times, frustration trends, and language distribution
+- **Dockerized** — validated docker-compose setup running both services in containers
 
----
-
-## 📁 Project Structure
+## System Architecture
 
 ```
-SupportGPT/
-├── frontend/                    # Next.js 15 App
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── auth/
-│   │   │   │   ├── login/page.tsx
-│   │   │   │   └── register/page.tsx
-│   │   │   ├── chat/page.tsx    # Main chat interface
-│   │   │   ├── analytics/page.tsx
-│   │   │   ├── admin/page.tsx
-│   │   │   └── layout.tsx
-│   │   ├── components/
-│   │   │   └── layout/AppLayout.tsx  # Sidebar + nav
-│   │   ├── lib/
-│   │   │   ├── api.ts           # Axios client
-│   │   │   └── store.ts         # Zustand state
-│   │   └── styles/globals.css
-│   ├── package.json
-│   └── .env.example
-│
-├── backend/                     # FastAPI
-│   ├── main.py                  # App entry point
-│   ├── agents/
-│   │   └── agent_router.py      # Multi-agent system
-│   ├── rag/
-│   │   ├── vector_store.py      # FAISS operations
-│   │   └── pdf_processor.py     # PDF → chunks pipeline
-│   ├── api/
-│   │   ├── auth.py
-│   │   ├── chat.py              # Chat + streaming
-│   │   ├── knowledge.py
-│   │   ├── history.py
-│   │   ├── analytics.py
-│   │   └── admin.py
-│   ├── models/schemas.py        # Pydantic models
-│   ├── services/database.py     # MongoDB connection
-│   ├── utils/
-│   │   ├── auth.py              # JWT utilities
-│   │   └── config.py            # Settings
-│   ├── requirements.txt
-│   └── .env.example
-│
-├── knowledge_base/              # PDF storage
-│   └── sample_docs/
-├── docker/
-│   ├── Dockerfile.backend
-│   ├── Dockerfile.frontend
-│   └── docker-compose.yml
-└── README.md
+┌─────────────┐     HTTPS      ┌──────────────────────────────┐
+│   Next.js    │ ─────────────▶ │          FastAPI              │
+│   Frontend   │ ◀───SSE──────  │                               │
+│  (Vercel)    │                │  1. analyze_query()           │
+└─────────────┘                │     intents + language +      │
+                               │     sentiment (1 Gemini call) │
+                               │  2. FAISS retrieval           │
+                               │     (English query, priority  │
+                               │      boost, confidence score) │
+                               │  3. Agent routing + synthesis │
+                               │     (Gemini 2.5 Flash)        │
+                               └───────┬──────────┬───────────┘
+                                       │          │
+                              ┌────────▼───┐  ┌───▼──────────┐
+                              │  MongoDB    │  │ FAISS index  │
+                              │  Atlas      │  │ + Sentence   │
+                              │  (users,    │  │ Transformers │
+                              │  convos,    │  │ (all-MiniLM- │
+                              │  analytics, │  │  L6-v2)      │
+                              │  sessions)  │  └──────────────┘
+                              └────────────┘
 ```
 
----
+## Technology Stack
 
-## 🚀 Quick Start
+**Frontend**
+- Next.js 15 (App Router) · React 19 · TypeScript
+- Tailwind CSS · Framer Motion · Recharts · Zustand · Axios
+- react-hot-toast · react-markdown · Lucide icons
+
+**Backend**
+- FastAPI · Uvicorn · Python 3.11+
+- python-jose (JWT) · passlib + bcrypt · SlowAPI (rate limiting)
+- Motor (async MongoDB driver) · Pydantic v2
+
+**Database**
+- MongoDB Atlas (users, conversations, analytics, sessions, audit_log, knowledge_base collections)
+
+**AI**
+- Google Gemini 2.5 Flash (`google-genai` SDK) — agents, intent/language/sentiment analysis, synthesis
+- Sentence Transformers `all-MiniLM-L6-v2` — embeddings
+- FAISS (CPU) — vector similarity search
+- PyMuPDF — PDF text extraction
+- Custom dependency-free recursive text splitter
+
+## Folder Structure
+
+```
+project-root/
+├── frontend/                  # Next.js application
+│   └── src/
+│       ├── app/               # Routes: auth, chat, analytics, admin, settings
+│       ├── components/        # AppLayout and shared components
+│       ├── lib/               # api.ts, store.ts, theme.ts, errors.ts
+│       └── styles/            # globals.css (design tokens, theming)
+├── backend/                   # FastAPI application
+│   ├── api/                   # auth, chat, user, knowledge, history, analytics, admin
+│   ├── agents/                # agent_router.py (agents, analysis, synthesis)
+│   ├── rag/                   # pdf_processor.py, vector_store.py
+│   ├── models/                # Pydantic schemas
+│   ├── services/              # database.py
+│   ├── utils/                 # config.py, auth.py
+│   └── main.py
+├── knowledge_base/            # NovaTech Solutions PDFs (12 documents)
+├── datasets/                  # Sample data files + data dictionary
+├── docs/                      # Report, guides, demo script
+├── screenshots/               # Application screenshots
+├── docker/                    # Dockerfiles + docker-compose.yml
+├── README.md
+├── LICENSE
+├── .env.example
+└── .gitignore
+```
+
+## Installation Guide
 
 ### Prerequisites
+- Node.js 20+ · Python 3.11+ · A MongoDB Atlas account (free tier works) · A Google Gemini API key ([aistudio.google.com/apikey](https://aistudio.google.com/apikey))
 
-- Node.js 20+
-- Python 3.11+
-- MongoDB Atlas account (free tier works)
-- Google AI Studio API key (Gemini)
-
-### 1. Clone & Setup
-
-```bash
-git clone <your-repo-url>
-cd SupportGPT
-```
-
-### 2. Backend Setup
-
+### Backend Setup
 ```bash
 cd backend
-
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your credentials (see Environment Variables section)
-
-# Run backend
-uvicorn main:app --reload --port 8000
 ```
 
-### 3. Frontend Setup
+### Database Setup
+1. Create a free cluster at [cloud.mongodb.com](https://cloud.mongodb.com)
+2. Database Access → create a database user
+3. Network Access → allow your IP (or `0.0.0.0/0` for development)
+4. Copy the connection string into `MONGODB_URL`
 
+### Environment Variables
+```bash
+# Backend: copy the template and fill in real values
+cp .env.example backend/.env
+
+# Frontend: create frontend/.env.local containing:
+# NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+See `.env.example` for every variable with explanations.
+
+### Frontend Setup
 ```bash
 cd frontend
+npm install --legacy-peer-deps   # required: React 19 / Next 15 peer resolution
+```
 
-# Install dependencies
-npm install
+## Running Locally
 
-# Configure environment
-cp .env.example .env.local
-# Edit .env.local: NEXT_PUBLIC_API_URL=http://localhost:8000
+```bash
+# Terminal 1 — backend
+cd backend
+venv\Scripts\activate            # (Windows)
+uvicorn main:app --reload --port 8000
 
-# Run frontend
+# Terminal 2 — frontend
+cd frontend
 npm run dev
 ```
 
-### 4. Open the App
+Open **http://localhost:3000**. First backend start downloads the embedding model (~90MB), which takes a minute.
 
-- **Frontend:** http://localhost:3000
-- **API Docs:** http://localhost:8000/docs
-- **API Health:** http://localhost:8000/health
+**Set up the knowledge base (one-time):** register an account, promote it to admin (see User Roles below), then go to Admin → upload the 12 PDFs from `/knowledge_base` → click **Rebuild Vector Index**.
 
----
+### Running with Docker (alternative)
+```bash
+cd docker
+docker-compose up --build
+```
+Both services build and run in containers; open http://localhost:3000.
 
-## 🐳 Docker Deployment (Local)
+## Building Production Version
 
 ```bash
-# From project root
-cd docker
+# Frontend
+cd frontend && npm run build
 
-# Copy and configure environment
-cp ../backend/.env.example ../backend/.env
-# Edit ../backend/.env
-
-# Build and start all services
-docker-compose up --build
-
-# Or run in background
-docker-compose up -d --build
+# Backend (no build step — verify it boots)
+cd backend && uvicorn main:app --port 8000
 ```
 
----
+## Deployment Instructions
 
-## ⚙️ Environment Variables
+Full beginner-friendly walkthrough: **[docs/Deployment_Guide.md](docs/Deployment_Guide.md)**
 
-### Backend (`backend/.env`)
+Summary: backend → **Render** (with a persistent disk mounted at `/opt/render/project/src/data` covering both the FAISS index and knowledge base PDFs), frontend → **Vercel** (with `vercel.json` install override), database → **MongoDB Atlas**. After first deploy, re-upload the knowledge base PDFs on the live site and rebuild the index once.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SECRET_KEY` | ✅ | JWT signing secret (min 32 chars) |
-| `MONGODB_URL` | ✅ | MongoDB Atlas connection string |
-| `MONGODB_DB_NAME` | ✅ | Database name (default: `supportgpt`) |
-| `GOOGLE_API_KEY` | ✅ | Google Gemini API key |
-| `GEMINI_MODEL` | ⚙️ | Model name (default: `gemini-2.0-flash`) |
-| `ALLOWED_ORIGINS` | ⚙️ | CORS origins JSON array |
-| `FAISS_INDEX_PATH` | ⚙️ | FAISS index directory (default: `./faiss_index`) |
-| `KNOWLEDGE_BASE_PATH` | ⚙️ | PDF storage directory (default: `./knowledge_base`) |
-| `EMBEDDING_MODEL` | ⚙️ | Sentence Transformers model (default: `all-MiniLM-L6-v2`) |
-| `CHUNK_SIZE` | ⚙️ | Text chunk size (default: `500`) |
-| `CHUNK_OVERLAP` | ⚙️ | Chunk overlap tokens (default: `50`) |
-| `TOP_K_RESULTS` | ⚙️ | RAG retrieval results (default: `5`) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | ⚙️ | JWT expiry (default: `1440` = 24h) |
+## API Documentation
 
-### Frontend (`frontend/.env.local`)
+Interactive OpenAPI docs are auto-generated by FastAPI — run the backend and open **http://localhost:8000/docs**.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_API_URL` | ✅ | Backend API URL |
+| Group | Endpoints |
+|---|---|
+| Auth | `POST /auth/register` · `POST /auth/login` · `GET /auth/me` |
+| Chat | `POST /chat` · `POST /chat/stream` (SSE) |
+| History | `GET /history` · `GET /history/{session_id}` · `DELETE /history/{session_id}` |
+| User | `GET/PUT /user/profile` · `PUT /user/password` · `GET /user/sessions` · `POST /user/logout` · `POST /user/logout-all` · `DELETE /user/account` · `GET/PUT /user/preferences` · `POST /user/export-data` |
+| Knowledge (admin) | `POST /knowledge/upload` · `GET /knowledge/documents` · `DELETE /knowledge/documents/{id}` |
+| Analytics | `GET /analytics` |
+| Admin | `POST /admin/rebuild-embeddings` · `GET /admin/stats` · `GET /admin/users` · `PATCH /admin/users/{id}/role` · `GET /admin/conversations` |
+| Health | `GET /health` |
 
----
+## User Roles
 
-## ☁️ Production Deployment
+The system has **two** roles:
 
-### Backend → Render
+| Role | Capabilities |
+|---|---|
+| `user` | Chat, history, analytics view, own settings/profile |
+| `admin` | Everything above + knowledge base management, user role management, conversation overview |
 
-1. Push code to GitHub
-2. Create new **Web Service** on [Render](https://render.com)
-3. Connect your repository, set root to `backend/`
-4. Build command: `pip install -r requirements.txt`
-5. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-6. Add all environment variables from `.env`
-7. Add a **Persistent Disk** mounted at `/app/faiss_index` for the vector index
+**Creating an admin:** new registrations default to `user`. Promote an account by editing its document in MongoDB Atlas (`users` collection → set `"role": "admin"`), then log out and back in. There are no pre-seeded credentials — create your own accounts. For evaluation, register two accounts (e.g., an admin and a regular user) and promote one as described.
 
-### Frontend → Vercel
+## Knowledge Base Documents
 
-1. Import project on [Vercel](https://vercel.com)
-2. Set root directory to `frontend/`
-3. Add environment variable:
-   - `NEXT_PUBLIC_API_URL` = your Render backend URL
-4. Deploy
+All 12 documents describe **NovaTech Solutions**, the fictional smart-home/electronics company (consistent products, prices, and policies across all files):
 
-### Database → MongoDB Atlas
+`CompanyOverview.pdf` · `FAQ.pdf` · `Products.pdf` · `Pricing.pdf` · `PrivacyPolicy.pdf` · `TermsAndConditions.pdf` · `RefundPolicy.pdf` · `ShippingPolicy.pdf` · `Warranty.pdf` · `InstallationGuide.pdf` · `UserManual.pdf` · `SupportGuide.pdf`
 
-1. Create cluster at [MongoDB Atlas](https://cloud.mongodb.com)
-2. Create database user with read/write permissions
-3. Whitelist `0.0.0.0/0` (or Render's IPs) in Network Access
-4. Copy the connection string to `MONGODB_URL`
+## Dataset Information
 
----
+This project does **not** train on or integrate external public datasets — the AI pipeline is fully powered by Gemini (zero-shot analysis) + RAG over the knowledge base above. The `/datasets` folder contains **sample data representing this system's own data shapes** (chat analytics records, intent classification examples, conversation exports) for evaluation and documentation purposes, plus a data dictionary. All sample data is fictional.
 
-## 📊 API Reference
+## Screenshots
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/auth/register` | POST | ❌ | Register new user |
-| `/auth/login` | POST | ❌ | Login & get JWT |
-| `/auth/me` | GET | ✅ | Get current user |
-| `/chat` | POST | ✅ | Send message (non-streaming) |
-| `/chat/stream` | POST | ✅ | Send message (SSE streaming) |
-| `/history` | GET | ✅ | List conversation sessions |
-| `/history/{session_id}` | GET | ✅ | Get conversation messages |
-| `/history/{session_id}` | DELETE | ✅ | Delete conversation |
-| `/analytics` | GET | ✅ | Platform analytics |
-| `/knowledge/upload` | POST | 🛡️ Admin | Upload PDF |
-| `/knowledge/documents` | GET | ✅ | List documents |
-| `/knowledge/documents/{id}` | DELETE | 🛡️ Admin | Delete document |
-| `/admin/stats` | GET | 🛡️ Admin | Admin statistics |
-| `/admin/users` | GET | 🛡️ Admin | List users |
-| `/admin/rebuild-embeddings` | POST | 🛡️ Admin | Rebuild FAISS index |
+See `/screenshots` for application captures (login, chat with agent/source badges, multilingual response, admin dashboard, analytics, settings).
 
----
+## Troubleshooting
 
-## 🤖 Multi-Agent System
+| Symptom | Fix |
+|---|---|
+| `npm install` fails with ERESOLVE | Use `npm install --legacy-peer-deps` (React 19 peer ranges) |
+| Backend `ModuleNotFoundError` | Activate the venv first: `venv\Scripts\activate` |
+| Chat returns "Failed to send" | Backend not running, or running outside the venv |
+| Gemini 404 / quota errors | Verify `GEMINI_MODEL=gemini-2.5-flash` and your API key at aistudio.google.com |
+| Answers not citing documents | Upload PDFs in Admin, then click **Rebuild Vector Index** |
+| Wrong/stale answers after deleting a doc | Deletion doesn't purge live FAISS chunks — always Rebuild after deleting |
+| Docker build slow/fails | Ensure `.dockerignore` files exist; run `npm install --legacy-peer-deps` locally first so the lock file is in sync |
 
-### Agent Routing Logic
+## Future Enhancements
 
-```
-Query: "I paid but can't access premium"
-          │
-          ▼
-   Intent Classifier
-          │
-          ▼
-   ["billing", "technical"]
-          │
-    ┌─────┴─────┐
-    ▼           ▼
- Billing    Technical
-  Agent      Agent
-    │           │
-    └─────┬─────┘
-          ▼
-    Synthesis LLM
-          │
-          ▼
-   Unified Response
-```
+- Voice-enabled support (speech-to-text/text-to-speech provider integration)
+- Email and WhatsApp channels (SendGrid / WhatsApp Business API)
+- Automatic ticket creation and live human-agent handoff
+- AI-generated conversation summaries and CSAT feedback collection
+- Admin pagination for large user/conversation lists
+- Incremental FAISS deletion (currently requires full rebuild)
 
-### Agents & Specializations
+## License
 
-| Agent | Triggers | Handles |
-|-------|----------|---------|
-| 💳 **Billing** | payment, invoice, refund, subscription, charge | Payment issues, refunds, billing history |
-| 🔧 **Technical** | login, bug, error, crash, install | Technical troubleshooting, debugging |
-| 📦 **Product** | feature, pricing, comparison, plan | Feature explanations, pricing info |
-| 🎯 **Complaint** | terrible, unacceptable, escalate, angry | Escalations, dissatisfied customers |
-| ❓ **FAQ** | how, what, general, policy | General questions, how-tos |
-
----
-
-## 📚 RAG Pipeline
-
-```
-PDF Upload
-    ↓
-Text Extraction (PyMuPDF)
-    ↓
-Text Cleaning & Normalization
-    ↓
-Chunking (LangChain RecursiveCharacterTextSplitter)
-  chunk_size=500, overlap=50
-    ↓
-Embedding Generation (all-MiniLM-L6-v2)
-  384-dimensional vectors
-    ↓
-FAISS IndexFlatIP Storage
-  (cosine similarity via inner product)
-    ↓
-Query-time Semantic Search (top-5)
-    ↓
-Context Injection into Gemini Prompt
-    ↓
-Grounded Response
-```
-
----
-
-## 🔐 Security
-
-- **JWT Authentication** — HS256 signed tokens, 24h expiry
-- **Password Hashing** — bcrypt via passlib
-- **Rate Limiting** — 60 requests/minute via SlowAPI
-- **CORS** — Configurable allowed origins
-- **Input Validation** — Pydantic models on all endpoints
-- **Admin Routes** — Role-based access control
-
----
-
-## 🧩 Tech Stack
-
-**Frontend**
-- Next.js 15 (App Router) + React 19
-- TypeScript + Tailwind CSS
-- Framer Motion (animations)
-- Zustand (state management)
-- Recharts (analytics charts)
-- React Markdown (message rendering)
-
-**Backend**
-- FastAPI + Uvicorn
-- Python 3.11+
-- Motor (async MongoDB driver)
-- LangChain + LangGraph
-- Google Gemini 2.5 Flash
-
-**AI & RAG**
-- Sentence Transformers `all-MiniLM-L6-v2`
-- FAISS (vector similarity search)
-- PyMuPDF (PDF extraction)
-- LangChain text splitters
-
-**Infrastructure**
-- MongoDB Atlas (database)
-- Render (backend hosting)
-- Vercel (frontend hosting)
-- Docker + docker-compose
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/your-feature`
-3. Commit changes: `git commit -m 'Add your feature'`
-4. Push: `git push origin feature/your-feature`
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-Built with ❤️ using Next.js, FastAPI, and Google Gemini
-</div>
+MIT — see [LICENSE](LICENSE).

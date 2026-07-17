@@ -21,6 +21,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """
+    data may include:
+      - sub: user id (required)
+      - role: user role
+      - tv: token_version at issue time (enables "logout from all devices")
+      - sid: session id, used to identify this specific login in the
+             sessions collection (enables "view active sessions" /
+             single-device logout)
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -64,7 +73,27 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
+    # Token version check — enables "logout from all devices".
+    #
+    # Backward compatibility: tokens issued before this feature existed have
+    # no "tv" claim at all. We treat that as "skip the check" rather than
+    # rejecting the token, so nobody gets silently logged out the moment
+    # this code deploys. Any token issued from here forward will always
+    # include "tv", so the check becomes fully active for new logins.
+    token_version = payload.get("tv")
+    if token_version is not None:
+        current_version = user.get("token_version", 0)
+        if token_version != current_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been logged out. Please sign in again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
     user["id"] = str(user["_id"])
+    # Attach session id (if present) so route handlers can identify "this"
+    # session without re-decoding the token.
+    user["_session_id"] = payload.get("sid")
     return user
 
 

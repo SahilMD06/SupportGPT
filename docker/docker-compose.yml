@@ -4,15 +4,14 @@ services:
   # ─── Backend ─────────────────────────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: ../docker/Dockerfile.backend
     container_name: supportgpt-backend
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      - ../backend/.env
     volumes:
-      - ./backend:/app
       - faiss_data:/app/faiss_index
       - knowledge_base:/app/knowledge_base
     environment:
@@ -31,7 +30,7 @@ services:
   # ─── Frontend ─────────────────────────────────────────────────────────────────
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: ../docker/Dockerfile.frontend
       args:
         - NEXT_PUBLIC_API_URL=http://localhost:8000

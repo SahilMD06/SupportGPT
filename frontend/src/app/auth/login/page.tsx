@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Loader2, ArrowRight, Zap, Sun, Moon, Monitor } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Wifi, Sun, Moon, Monitor } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
@@ -78,27 +78,31 @@ export default function LoginPage() {
           borderRight: '1px solid var(--border-subtle)',
         }}
       >
-        {/* Subtle glow */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              'radial-gradient(circle at 25% 15%, rgba(99,102,241,0.12) 0%, transparent 55%), radial-gradient(circle at 75% 85%, rgba(139,92,246,0.08) 0%, transparent 55%)',
+              'radial-gradient(circle at 25% 15%, rgba(14,165,233,0.14) 0%, transparent 55%), radial-gradient(circle at 75% 85%, rgba(56,189,248,0.10) 0%, transparent 55%)',
           }}
         />
 
         <div className="relative z-10 flex flex-col h-full p-12">
-          {/* Logo */}
+          {/* Logo — NovaTech (company) + SupportGPT (the AI service that powers support) */}
           <div className="flex items-center gap-2.5 mb-16">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: 'var(--accent-600)' }}
             >
-              <Zap className="w-4 h-4 text-white" />
+              <Wifi className="w-4 h-4 text-white" />
             </div>
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-              SupportGPT
-            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                NovaTech Solutions
+              </span>
+              <span className="text-xs font-medium" style={{ color: 'var(--accent-500)' }}>
+                SupportGPT
+              </span>
+            </div>
           </div>
 
           {/* Hero text */}
@@ -107,26 +111,28 @@ export default function LoginPage() {
               className="text-xs font-semibold uppercase mb-5"
               style={{ color: 'var(--accent-500)', letterSpacing: '0.1em' }}
             >
-              Multi-Agent AI Platform
+              Smart Home Support
             </p>
             <h1
               className="text-3xl font-semibold leading-snug mb-5"
               style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}
             >
-              Support that actually understands your customers
+              Smart devices deserve smart support
             </h1>
             <p className="text-sm leading-relaxed mb-10" style={{ color: 'var(--text-tertiary)' }}>
-              Five specialized AI agents with automatic intent routing and RAG-powered knowledge retrieval.
+              SupportGPT, NovaTech's AI support platform, routes every question to the
+              right specialist automatically — five agents working together to help you
+              faster.
             </p>
 
             {/* Agent list */}
             <div className="space-y-3.5">
               {[
-                { emoji: '💳', label: 'Billing Agent',   desc: 'Payments, refunds, subscriptions' },
-                { emoji: '🔧', label: 'Technical Agent', desc: 'Bugs, errors, troubleshooting' },
-                { emoji: '📦', label: 'Product Agent',   desc: 'Features, pricing, comparisons' },
-                { emoji: '🎯', label: 'Complaint Agent', desc: 'Escalations, dissatisfaction' },
-                { emoji: '❓', label: 'FAQ Agent',       desc: 'General questions & how-tos' },
+                { emoji: '💳', label: 'Billing Agent',   desc: 'Orders, refunds, payment plans' },
+                { emoji: '🔧', label: 'Technical Agent', desc: 'Device setup, app issues, troubleshooting' },
+                { emoji: '📦', label: 'Product Agent',   desc: 'Devices, specs, bundles & pricing' },
+                { emoji: '🎯', label: 'Complaint Agent', desc: 'Escalations, damaged or delayed orders' },
+                { emoji: '❓', label: 'FAQ Agent',       desc: 'Shipping, warranty, general questions' },
               ].map((agent) => (
                 <div key={agent.label} className="flex items-center gap-3">
                   <span className="text-base w-6 text-center">{agent.emoji}</span>
@@ -144,7 +150,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-xs mt-8" style={{ color: 'var(--text-disabled)' }}>
-            Trusted by support teams worldwide
+            Powering smarter homes, one device at a time
           </p>
         </div>
       </div>
@@ -160,11 +166,16 @@ export default function LoginPage() {
               className="w-7 h-7 rounded-md flex items-center justify-center"
               style={{ background: 'var(--accent-600)' }}
             >
-              <Zap className="w-3.5 h-3.5 text-white" />
+              <Wifi className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-              SupportGPT
-            </span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                NovaTech Solutions
+              </span>
+              <span className="text-[10px] font-medium" style={{ color: 'var(--accent-500)' }}>
+                SupportGPT
+              </span>
+            </div>
           </div>
           <div className="hidden lg:block" />
 
@@ -205,7 +216,7 @@ export default function LoginPage() {
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="input-premium"
-                  placeholder="you@company.com"
+                  placeholder="you@example.com"
                   autoComplete="email"
                 />
               </div>

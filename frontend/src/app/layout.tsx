@@ -4,8 +4,8 @@ import { ThemeProvider } from '@/lib/theme';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
-  title: 'SupportGPT — AI Customer Support',
-  description: 'Multi-agent AI customer support platform',
+  title: 'NovaTech Solutions | SupportGPT',
+  description: 'SupportGPT — AI-powered customer support for NovaTech Solutions smart home devices and electronics',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

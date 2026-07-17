@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    // Next.js 15 features
-  },
+  output: 'standalone',
   images: {
     remotePatterns: [
       {

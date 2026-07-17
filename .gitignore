@@ -1,8 +1,8 @@
 # ─── Environment files (secrets — never commit these) ────────────────────────
-backend/.env
-frontend/.env.local
 .env
 .env*.local
+backend/.env
+frontend/.env.local
 
 # ─── Python / Backend ─────────────────────────────────────────────────────────
 venv/
@@ -14,7 +14,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# RAG data — environment-specific, not shared via git
+# RAG data — environment-specific, regenerated per deployment
 backend/faiss_index/
 backend/knowledge_base/*.pdf
 
@@ -22,7 +22,9 @@ backend/knowledge_base/*.pdf
 node_modules/
 .next/
 out/
+dist/
 build/
+coverage/
 *.tsbuildinfo
 next-env.d.ts
 
@@ -45,6 +47,7 @@ yarn-error.log*
 Thumbs.db
 Desktop.ini
 
-# ─── Logs ──────────────────────────────────────────────────────────────────────
+# ─── Logs & cache ──────────────────────────────────────────────────────────────
 *.log
 logs/
+.cache/

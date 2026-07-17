@@ -13,7 +13,7 @@ from utils.config import settings
 logger = logging.getLogger(__name__)
 
 # Global FAISS index and metadata
-_index: Optional[faiss.IndexFlatL2] = None
+_index: Optional[faiss.IndexFlatIP] = None
 _chunks: List[str] = []
 _metadata: List[dict] = []
 _model: Optional[SentenceTransformer] = None
@@ -90,7 +90,12 @@ def add_documents(texts: List[str], metadata: List[dict] = None):
 
 
 def search(query: str, top_k: int = None) -> List[Tuple[str, float, dict]]:
-    """Search FAISS index for relevant chunks."""
+    """
+    Search FAISS index for relevant chunks.
+    Returns (chunk_text, similarity_score, metadata) tuples, ordered by
+    descending similarity. Scores are cosine similarity (embeddings are
+    normalized), roughly in the range -1 to 1, where higher is more relevant.
+    """
     global _index, _chunks, _metadata
 
     if _index is None or len(_chunks) == 0:
@@ -114,24 +119,65 @@ def search(query: str, top_k: int = None) -> List[Tuple[str, float, dict]]:
     return results
 
 
-def get_rag_context(query: str, top_k: int = None) -> Tuple[str, List[str]]:
-    """Get RAG context string for a query."""
-    results = search(query, top_k)
+def get_rag_context(
+    query: str,
+    top_k: int = None,
+    priority_filename: str = None,
+) -> Tuple[str, List[str], bool, float]:
+    """
+    Retrieve RAG context for a query, with optional document priority boosting
+    and confidence scoring.
+
+    Args:
+        query: the user's question
+        top_k: number of chunks to include in context
+        priority_filename: if set (e.g. "PrivacyPolicy.pdf"), chunks from this
+            document are ranked ahead of equally-or-less relevant chunks from
+            other documents. Implemented by searching a wider candidate pool
+            and re-ordering, since FAISS's flat index doesn't support native
+            metadata filtering.
+
+    Returns:
+        (context_string, sources_list, is_confident, best_score)
+
+        is_confident is False when the best matching chunk's similarity score
+        falls below settings.RAG_CONFIDENCE_THRESHOLD — callers handling
+        sensitive topics (e.g. privacy/security) should use this signal to
+        fall back to a clearly-labeled general-knowledge response instead of
+        presenting a weak match as an authoritative company answer.
+    """
+    top_k = top_k or settings.TOP_K_RESULTS
+
+    # Widen the candidate pool when we need room to re-rank for priority,
+    # so a relevant priority-document chunk outside the raw top-k can still
+    # surface.
+    candidate_k = max(top_k * 3, 10) if priority_filename else top_k
+    results = search(query, candidate_k)
 
     if not results:
-        return "", []
+        return "", [], False, 0.0
+
+    if priority_filename:
+        priority_hits = [r for r in results if r[2].get("filename") == priority_filename]
+        other_hits = [r for r in results if r[2].get("filename") != priority_filename]
+        ordered = priority_hits + other_hits
+    else:
+        ordered = results
+
+    top_results = ordered[:top_k]
+    best_score = max((r[1] for r in top_results), default=0.0)
+    is_confident = best_score >= settings.RAG_CONFIDENCE_THRESHOLD
 
     context_parts = []
     sources = []
-
-    for chunk, score, meta in results:
+    for chunk, score, meta in top_results:
         source = meta.get("filename", "Knowledge Base")
         if source not in sources:
             sources.append(source)
         context_parts.append(f"[Source: {source}]\n{chunk}")
 
     context = "\n\n---\n\n".join(context_parts)
-    return context, sources
+    return context, sources, is_confident, best_score
 
 
 def rebuild_index(documents: List[dict]):
@@ -167,4 +213,5 @@ def get_index_stats() -> dict:
         "total_chunks": len(_chunks),
         "index_loaded": _index is not None,
         "embedding_model": settings.EMBEDDING_MODEL,
+        "confidence_threshold": settings.RAG_CONFIDENCE_THRESHOLD,
     }

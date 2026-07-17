@@ -5,7 +5,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { MessageSquare, Users, Clock, TrendingUp, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { MessageSquare, Users, Clock, TrendingUp, RefreshCw, ArrowUpRight, Smile, Frown, Languages } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 import { analyticsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -15,10 +15,12 @@ const AGENT_COLORS: Record<string, string> = {
   technical: '#3B82F6',
   product:   '#10B981',
   complaint: '#EF4444',
+  privacy:   '#06B6D4',
   faq:       '#8B5CF6',
 };
 
-const PALETTE = ['#F59E0B', '#3B82F6', '#10B981', '#EF4444', '#8B5CF6', '#06B6D4'];
+const PALETTE = ['#F59E0B', '#3B82F6', '#10B981', '#EF4444', '#06B6D4', '#8B5CF6'];
+const LANGUAGE_PALETTE = ['#0EA5E9', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#06B6D4', '#EC4899'];
 
 function StatCard({
   icon: Icon, label, value, sub, trend, color = '#6366F1'
@@ -91,6 +93,12 @@ function SkeletonChart() {
   );
 }
 
+function frustrationColor(level: number) {
+  if (level >= 4) return '#EF4444';
+  if (level >= 3) return '#F59E0B';
+  return '#10B981';
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +116,10 @@ export default function AnalyticsPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const frustrationTrendData = data?.sentiment?.frustration_trend
+    ?.filter((d: any) => d.avg_frustration !== null)
+    .map((d: any) => ({ date: d.date, avg_frustration: d.avg_frustration })) || [];
 
   return (
     <AppLayout>
@@ -208,10 +220,10 @@ export default function AnalyticsPage() {
                         type="monotone"
                         dataKey="count"
                         name="Chats"
-                        stroke="#6366F1"
+                        stroke="#0EA5E9"
                         strokeWidth={2}
                         dot={false}
-                        activeDot={{ r: 4, fill: '#6366F1', strokeWidth: 0 }}
+                        activeDot={{ r: 4, fill: '#0EA5E9', strokeWidth: 0 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -299,7 +311,7 @@ export default function AnalyticsPage() {
                   )}
                 </div>
 
-                {/* Agent bar */}
+                {/* Agent usage bar */}
                 <div className="card p-5">
                   <h3 className="text-sm font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>
                     Agent usage count
@@ -323,6 +335,127 @@ export default function AnalyticsPage() {
                       <p className="text-sm" style={{ color: 'var(--text-disabled)' }}>No data yet</p>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* ─── Smarter Conversations: Sentiment & Language ─────────────── */}
+              <div className="pt-2">
+                <h2 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+                  Sentiment &amp; Language
+                </h2>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <StatCard
+                    icon={data.sentiment.avg_frustration >= 3 ? Frown : Smile}
+                    label="Avg Frustration"
+                    value={data.sentiment.avg_frustration > 0 ? `${data.sentiment.avg_frustration} / 5` : '—'}
+                    color={frustrationColor(data.sentiment.avg_frustration)}
+                  />
+                  <StatCard
+                    icon={Smile}
+                    label="Calm Conversations"
+                    value={data.sentiment.low_frustration_count.toLocaleString()}
+                    sub="Frustration level 1-2"
+                    color="#10B981"
+                  />
+                  <StatCard
+                    icon={TrendingUp}
+                    label="Mildly Impatient"
+                    value={data.sentiment.medium_frustration_count.toLocaleString()}
+                    sub="Frustration level 3"
+                    color="#F59E0B"
+                  />
+                  <StatCard
+                    icon={Frown}
+                    label="High Frustration"
+                    value={data.sentiment.high_frustration_count.toLocaleString()}
+                    sub="Frustration level 4-5"
+                    color="#EF4444"
+                  />
+                </div>
+
+                <div className="grid lg:grid-cols-3 gap-4">
+                  {/* Frustration trend */}
+                  <div className="card p-5 lg:col-span-2">
+                    <h3 className="text-sm font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>
+                      Frustration trend
+                    </h3>
+                    {frustrationTrendData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={180}>
+                        <LineChart data={frustrationTrendData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fill: 'var(--text-disabled)', fontSize: 10 }}
+                            tickFormatter={(v) => v.slice(5)}
+                            interval="preserveStartEnd"
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis domain={[1, 5]} tick={{ fill: 'var(--text-disabled)', fontSize: 10 }} axisLine={false} tickLine={false} width={20} />
+                          <Tooltip content={<ChartTooltip />} />
+                          <Line
+                            type="monotone"
+                            dataKey="avg_frustration"
+                            name="Avg frustration"
+                            stroke="#EF4444"
+                            strokeWidth={2}
+                            dot={false}
+                            activeDot={{ r: 4, fill: '#EF4444', strokeWidth: 0 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-40 flex items-center justify-center">
+                        <p className="text-sm" style={{ color: 'var(--text-disabled)' }}>No data yet</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Language distribution */}
+                  <div className="card p-5">
+                    <h3 className="text-sm font-semibold mb-5 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                      <Languages className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} />
+                      Languages
+                    </h3>
+                    {data.languages?.length > 0 ? (
+                      <>
+                        <ResponsiveContainer width="100%" height={120}>
+                          <PieChart>
+                            <Pie
+                              data={data.languages}
+                              dataKey="count"
+                              nameKey="language_name"
+                              cx="50%" cy="50%"
+                              innerRadius={35} outerRadius={55}
+                              paddingAngle={3}
+                            >
+                              {data.languages.map((e: any, i: number) => (
+                                <Cell key={e.language_name} fill={LANGUAGE_PALETTE[i % LANGUAGE_PALETTE.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip content={<ChartTooltip />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="space-y-1.5 mt-3">
+                          {data.languages.slice(0, 5).map((l: any, i: number) => (
+                            <div key={l.language_name} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{ background: LANGUAGE_PALETTE[i % LANGUAGE_PALETTE.length] }} />
+                                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{l.language_name}</span>
+                              </div>
+                              <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{l.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="h-32 flex items-center justify-center">
+                        <p className="text-sm" style={{ color: 'var(--text-disabled)' }}>No data yet</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
