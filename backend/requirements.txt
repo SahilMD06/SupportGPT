@@ -15,16 +15,13 @@ pydantic[email]>=2.8.2
 motor>=3.5.1
 pymongo>=4.8.0
 
-# AI — Gemini (calls the API directly, no LangChain wrapper)
+# AI — Gemini (chat AND embeddings, both via API — no local model weights)
 google-genai>=0.3.0
 
-# Used only for splitting extracted PDF text into chunks
-langchain-text-splitters>=0.3.0
-
-# RAG & Embeddings
+# RAG — vector search only; embeddings now come from the Gemini API above,
+# not a local PyTorch model, which removes ~500MB+ of memory pressure that
+# was crashing free-tier deploys (e.g. Render's 512MB limit).
 faiss-cpu>=1.9.0
-sentence-transformers>=3.1.0
-torch>=2.6.0
 numpy>=2.0.0
 
 # PDF Processing

@@ -28,7 +28,10 @@ class Settings(BaseSettings):
     # RAG
     FAISS_INDEX_PATH: str = "./faiss_index"
     KNOWLEDGE_BASE_PATH: str = "./knowledge_base"
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    # Gemini's hosted embedding model — used instead of a locally-loaded
+    # PyTorch/sentence-transformers model, which used enough memory on its
+    # own to crash free-tier hosting (e.g. Render's 512MB limit).
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
     CHUNK_SIZE: int = 500
     CHUNK_OVERLAP: int = 50
     TOP_K_RESULTS: int = 5
@@ -36,8 +39,7 @@ class Settings(BaseSettings):
     # RAG confidence — cosine similarity threshold (0-1) below which retrieval
     # is considered "not confident". Used to trigger fallback disclaimers for
     # sensitive topics (e.g. privacy) rather than presenting a weak match as
-    # if it were an authoritative answer. Tune based on your embedding model
-    # and corpus; 0.35 is a reasonable starting point for all-MiniLM-L6-v2.
+    # if it were an authoritative answer.
     RAG_CONFIDENCE_THRESHOLD: float = 0.35
 
     # Rate Limiting

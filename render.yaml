@@ -1,0 +1,41 @@
+# Render deployment configuration for the SupportGPT backend.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# This defines a single web service with a persistent disk mounted at
+# /opt/render/project/src/data, covering BOTH the FAISS index and the
+# knowledge base PDFs — required since Render's default filesystem is
+# ephemeral and would lose uploaded documents on every redeploy.
+
+services:
+  - type: web
+    name: supportgpt-backend
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MONGODB_URL
+        sync: false          # set manually in the Render dashboard — contains credentials
+      - key: MONGODB_DB_NAME
+        value: supportgpt
+      - key: GOOGLE_API_KEY
+        sync: false           # set manually in the Render dashboard
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: ALLOWED_ORIGINS
+        value: '["https://your-app.vercel.app"]'
+      - key: FAISS_INDEX_PATH
+        value: /opt/render/project/src/data/faiss_index
+      - key: KNOWLEDGE_BASE_PATH
+        value: /opt/render/project/src/data/knowledge_base
+      - key: RAG_CONFIDENCE_THRESHOLD
+        value: "0.35"
+    disk:
+      name: supportgpt-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 2
